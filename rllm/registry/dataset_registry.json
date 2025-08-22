@@ -1,0 +1,23 @@
+{
+  "dapo_math": {
+    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/dapo_math/train.parquet"
+  },
+  "aime2024": {
+    "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/aime2024/test.parquet"
+  },
+  "deepmath_lv7-9": {
+    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/deepmath_lv7-9/train.parquet"
+  },
+  "opensicence2-20k": {
+    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/opensicence2-20k/train.parquet"
+  },
+  "gpqa-diamond": {
+    "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/gpqa-diamond/test.parquet"
+  },
+  "reasoning-gym-27k": {
+    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/reasoning-gym-27k/train.parquet"
+  },
+  "reasoning-gym-2_7k": {
+    "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/reasoning-gym-2_7k/test.parquet"
+  }
+}
