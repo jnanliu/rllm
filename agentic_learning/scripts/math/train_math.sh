@@ -59,6 +59,7 @@ python3 -m agentic_learning.scripts.math.train_math \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.actor.strategy=fsdp \
+    actor_rollout_ref.actor.checkpoint.contents=[] \
     actor_rollout_ref.hybrid_engine=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=${train_batch_size} \
     actor_rollout_ref.actor.use_dynamic_bsz=${use_dynamic_bsz} \

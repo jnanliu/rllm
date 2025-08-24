@@ -39,7 +39,7 @@ ref_ppo_max_token_len=$((2 * max_prompt_length + 2 * max_response_length))
 
 offload=False
 
-sp=1
+sp=4
 
 gen_tp=$4
 gpu_memory_utilization=$5
@@ -58,6 +58,7 @@ python3 -m agentic_learning.scripts.puzzle.train_puzzle \
     actor_rollout_ref.model.path=${model} \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.model.use_remove_padding=True \
+    actor_rollout_ref.actor.checkpoint.contents=[] \
     actor_rollout_ref.actor.strategy=fsdp \
     actor_rollout_ref.hybrid_engine=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=${train_batch_size} \

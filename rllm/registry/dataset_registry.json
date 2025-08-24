@@ -8,8 +8,8 @@
   "deepmath_lv7-9": {
     "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/deepmath_lv7-9/train.parquet"
   },
-  "opensicence2-20k": {
-    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/opensicence2-20k/train.parquet"
+  "openscience2-20k": {
+    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/openscience2-20k/train.parquet"
   },
   "gpqa-diamond": {
     "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/gpqa-diamond/test.parquet"

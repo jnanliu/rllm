@@ -80,7 +80,7 @@ def compute_policy_loss(
     ratio = torch.where(
         result_mask.bool(),
         torch.exp(negative_approx_kl),
-        torch.exp(log_prob)
+        torch.exp(log_prob * log_prob.detach() / (log_prob + 1e-6))
     )
 
     if cliprange_low is None:

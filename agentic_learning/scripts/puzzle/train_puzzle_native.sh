@@ -14,7 +14,7 @@ model=$1
 timestamp=$(date +"%Y%m%d_%H%M%S")
 
 project_name=AgenticLearning
-exp_name=Puzzle-${project_name}-${model#*/}-${timestamp}
+exp_name=NativePuzzle-${project_name}-${model#*/}-${timestamp}
 
 # grpo related
 adv_estimator=grpo
@@ -75,7 +75,7 @@ python3 -m agentic_learning.scripts.puzzle.train_puzzle \
     actor_rollout_ref.actor.fsdp_config.param_offload=${offload} \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=${offload}  \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
-    actor_rollout_ref.rollout.name=sglang \
+    actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.mode=async \
     actor_rollout_ref.rollout.engine_kwargs.sglang.attention_backend=flashinfer \
     actor_rollout_ref.rollout.chat_scheduler=verl.schedulers.completions_scheduler.CompletionsScheduler \

@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import numpy as np
 from omegaconf import OmegaConf
 from pprint import pprint
+from tqdm import tqdm
 
 from verl import DataProto
 from verl.protocol import pad_dataproto_to_divisor
@@ -92,6 +93,8 @@ class AgenticLearningPPOTrainer(AgentPPOTrainer):
         # we start from step 1
         self.global_steps += 1
 
+        progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
+
         for epoch in range(self.config.trainer.total_epochs):
             pprint(f"epoch {epoch}, step {self.global_steps} started")
             for batch_dict in self.train_dataloader:
@@ -158,8 +161,8 @@ class AgenticLearningPPOTrainer(AgentPPOTrainer):
                             response_ids = batch[i].batch['responses'] 
                             valid_response_length = batch[i].batch['attention_mask'][prompt_length:].sum()
 
-                            # if reward_tensor[i, valid_response_length - 1] > 0 and num_queries > 0:
-                            #     reward_tensor[i, valid_response_length - 1] = reward_tensor[i, valid_response_length - 1] + 0.1
+                            if reward_tensor[i, valid_response_length - 1] > 0 and num_queries > 0:
+                                reward_tensor[i, valid_response_length - 1] = reward_tensor[i, valid_response_length - 1] + 0.1
                         batch.batch["token_level_scores"] = reward_tensor
                         # # reward tensor for env-based trajectory data can be obtained by processing the trajectories
                         # if "token_level_scores" not in batch.batch:
@@ -430,11 +433,13 @@ class AgenticLearningPPOTrainer(AgentPPOTrainer):
                 # TODO: make a canonical logger that supports various backend
                 logger.log(data=metrics, step=self.global_steps)
 
+                progress_bar.update(1)
+
                 self.global_steps += 1
 
-                if self.global_steps >= self.total_training_steps:
+                if self.global_steps > self.total_training_steps:
                     break
-            if self.global_steps >= self.total_training_steps:
+            if self.global_steps > self.total_training_steps:
                 break
         
         # perform validation after training
@@ -442,9 +447,10 @@ class AgenticLearningPPOTrainer(AgentPPOTrainer):
             val_metrics = self._validate_agent()
             pprint(f"Final validation metrics: {val_metrics}")
             logger.log(data=val_metrics, step=self.global_steps)
+            progress_bar.close()
         # save last checkpoints
         with _timer("save_checkpoint", timing_raw):
-                self._save_checkpoint()
+            self._save_checkpoint()
 
     def _validate_agent(self):
         rewards_lst = []

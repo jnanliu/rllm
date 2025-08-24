@@ -9,7 +9,7 @@ from agentic_learning.rllm.agent_trainer import AgenticLearningAgentTrainer
 
 @hydra.main(config_path="pkg://rllm.trainer.config", config_name="ppo_trainer", version_base=None)
 def main(config):
-    train_dataset = DatasetRegistry.load_dataset("opensicence2-20k", "train")
+    train_dataset = DatasetRegistry.load_dataset("openscience2-20k", "train")
     test_dataset = DatasetRegistry.load_dataset("gpqa-diamond", "test")
 
     agent_args = {
