@@ -14,7 +14,7 @@ model=$1
 timestamp=$(date +"%Y%m%d_%H%M%S")
 
 project_name=AgenticLearning
-exp_name=NativeScience-${project_name}-${model#*/}-${timestamp}
+exp_name=${project_name}-NativePuzzle-${model#*/}-${timestamp}
 
 # grpo related
 adv_estimator=grpo
@@ -34,7 +34,7 @@ nnodes=$2
 n_gpus_per_node=$3
 
 use_dynamic_bsz=True
-actor_ppo_max_token_len=$((max_prompt_length + max_response_length))
+actor_ppo_max_token_len=$((2 * max_prompt_length + 2 * max_response_length))
 ref_ppo_max_token_len=$((2 * max_prompt_length + 2 * max_response_length))
 
 offload=False
@@ -50,7 +50,7 @@ then
 ray start --head --port=8266 &
 sleep 10
 
-python3 -m agentic_learning.scripts.science.train_science \
+python3 -m agentic_learning.scripts.puzzle.train \
     data.train_batch_size=${train_batch_size} \
     data.val_batch_size=256 \
     data.max_prompt_length=${max_prompt_length} \
@@ -77,6 +77,7 @@ python3 -m agentic_learning.scripts.science.train_science \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.mode=async \
+    actor_rollout_ref.rollout.engine_kwargs.sglang.attention_backend=flashinfer \
     actor_rollout_ref.rollout.chat_scheduler=verl.schedulers.completions_scheduler.CompletionsScheduler \
     actor_rollout_ref.rollout.temperature=0.7 \
     actor_rollout_ref.rollout.top_p=0.8 \
@@ -121,7 +122,7 @@ python3 -m agentic_learning.scripts.science.train_science \
     +agent.mask_result=False \
     +agent.enable_interaction=False \
     +env.model_name="Qwen/Qwen3-30B-A3B-Instruct-2507" \
-    +env.base_url=["https://sd2egkbccck1fc4k45t20.apigateway-cn-beijing.volceapi.com/v1"] \
+    +env.base_url=["https://sd2b27ra80c6ft26ua11g.apigateway-cn-beijing.volceapi.com/v1"] \
 
 else
 # init worker

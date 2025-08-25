@@ -1,63 +1,66 @@
-# Adapted from Qwen2.5-Math and Laser
-# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 import multiprocessing
 import re
+import pickle
+import queue  # Import the queue module for exception type hint
+from functools import wraps
 from math import isclose
-from typing import Union, Dict, Any
+from typing import Any, Callable, Dict, Iterator, Optional, Tuple, Union
 
 import regex
-from latex2sympy2 import latex2sympy
+from latex2sympy2_extended import latex2sympy
 from sympy import N, simplify
 from sympy.parsing.latex import parse_latex
 from sympy.parsing.sympy_parser import parse_expr
 from word2number import w2n
 
+from verl.utils.py_functional import timeout_limit
 
-def math_scorer(
-    prediction: str,
-    ground_truth: str,
-    timeout: int = 5
-) -> float:
-    output_queue = multiprocessing.Queue()
-    process = multiprocessing.Process(
-        target=math_equal_process, args=(prediction, ground_truth, output_queue)
-    )
-    process.start()
-    process.join(timeout)
 
-    if process.is_alive():
-        process.terminate()
-        process.join(1)
-        score = 0.0
-    else:
-        try:
-            acc = output_queue.get(1)
-            score = 1.0 if acc else 0.0
-        except:
-            score = 0.0
-    return score
+def compute_score(
+    data_source: str,
+    solution_str: str, 
+    ground_truth: str, 
+    extra_info: dict[str, Any],
+    format_score: int = 0.0
+) -> Dict[str, Any]:
+    answer = extract_answer(solution_str, "math", only_boxed=True)
+    if answer is None or answer == "":
+        return {
+            "score": format_score,
+            "acc": 0.0,
+            "predicted_answer": "",
+        }
 
-def math_equal_process(answer, ground_truth, output_queue):
+    ground_truth = strip_string(ground_truth)
+    answer = strip_string(answer)
+
     try:
-        ground_truth = strip_string(ground_truth)
-        result = math_equal(answer, ground_truth)
-    except:
-        result = False
-    finally:
-        output_queue.put(result)
+        is_equal = math_equal(answer, ground_truth)
+        score = 1 if is_equal else format_score
+        return {
+            "score": score,
+            "acc": score,
+            "predicted_answer": answer,
+        }
+    except TimeoutError:
+        print(f"Processing timed out for {answer} w.r.t. {ground_truth}")
+        return {
+            "score": format_score,
+            "acc": 0.0,
+            "predicted_answer": answer,
+        }
+    except Exception as e:
+        print(f"Processing error: {e} for {answer} w.r.t. {ground_truth}")
+        return {
+            "score": format_score,
+            "acc": 0.0,
+            "predicted_answer": answer,
+        }
 
+@timeout_limit(seconds=10.0)
+def math_equal_with_timeout(answer, ground_truth):
+    is_equal = math_equal(answer, ground_truth)
+    return is_equal
 
 def _fix_fracs(string):
     substrs = string.split("\\frac")
@@ -90,7 +93,6 @@ def _fix_fracs(string):
     string = new_str
     return string
 
-
 def _fix_a_slash_b(string):
     if len(string.split("/")) != 2:
         return string
@@ -107,11 +109,9 @@ def _fix_a_slash_b(string):
     except:
         return string
 
-
 def _fix_sqrt(string):
     _string = re.sub(r"\\sqrt(\w+)", r"\\sqrt{\1}", string)
     return _string
-
 
 def convert_word_number(text: str) -> str:
     try:
@@ -119,7 +119,6 @@ def convert_word_number(text: str) -> str:
     except:
         pass
     return text
-
 
 # units mainly from MathQA
 unit_texts = [
@@ -258,7 +257,6 @@ unit_texts = [
 ]
 
 unit_texts.extend([t + "s" for t in unit_texts])
-
 
 def strip_string(string, skip_unit=False):
     string = str(string).strip()
@@ -400,7 +398,6 @@ def strip_string(string, skip_unit=False):
 
     return string
 
-
 def extract_multi_choice_answer(pred_str):
     # TODO: SFT models
     if "Problem:" in pred_str:
@@ -411,9 +408,7 @@ def extract_multi_choice_answer(pred_str):
         return patt.group("ans").upper()
     return "placeholder"
 
-
 direct_answer_trigger_for_fewshot = ("choice is", "answer is")
-
 
 def choice_answer_clean(pred: str):
     pred = pred.strip("\n")
@@ -458,7 +453,6 @@ def choice_answer_clean(pred: str):
 
     return pred
 
-
 def find_box(pred_str: str):
     ans = pred_str.split("boxed")[-1]
     if not ans:
@@ -480,7 +474,6 @@ def find_box(pred_str: str):
     else:
         a = ans.split("$")[0].strip()
     return a
-
 
 def clean_units(pred_str: str):
     """Clean the units in the number."""
@@ -505,7 +498,6 @@ def clean_units(pred_str: str):
     pred_str = pred_str.replace(" C", "")
     pred_str = pred_str.replace("°", "")
     return pred_str
-
 
 def last_boxed_only_string(string: str) -> str:
     """Extract the last LaTeX boxed expression from a string.
@@ -535,7 +527,6 @@ def last_boxed_only_string(string: str) -> str:
         i += 1
 
     return string[idx + len("\\boxed{") : right_brace_idx] if right_brace_idx is not None else ""
-
 
 def extract_answer(pred_str, data_name, only_boxed=True, use_last_number=True):
     pred_str = pred_str.replace("\u043a\u0438", "")
@@ -580,7 +571,7 @@ def extract_answer(pred_str, data_name, only_boxed=True, use_last_number=True):
             pred = pred_str.split("答案是")[1].strip().split("\n\n")[0].strip()
         else:  # use the last number
             if use_last_number:
-                pattern = "-?\d*\.?\d+"
+                pattern = r"-?\d*\.?\d+"
                 pred = re.findall(pattern, pred_str.replace(",", ""))
                 if len(pred) >= 1:
                     pred = pred[-1]
@@ -632,7 +623,6 @@ def choice_answer_clean(pred: str):
     pred = pred.rstrip(".").rstrip("/")
     return pred
 
-
 def parse_digits(num):
     num = regex.sub(",", "", str(num))
     try:
@@ -673,7 +663,6 @@ def math_equal(
     reference: Union[float, str],
     include_percentage: bool = True,
     is_close: bool = True,
-    timeout: bool = False,
 ) -> bool:
     """
     Exact match of math if and only if:
@@ -825,14 +814,8 @@ def math_equal(
         pred = f"{pred[0].strip()} - ({pred[1].strip()})"
         ref = reference.split("=")
         ref = f"{ref[0].strip()} - ({ref[1].strip()})"
-        if timeout:
-            if call_with_timeout(
-                symbolic_equal_process, pred, ref
-            ) or call_with_timeout(symbolic_equal_process, f"-({pred})", ref):
-                return True
-        else:
-            if symbolic_equal(pred, ref) or symbolic_equal(f"-({pred})", ref):
-                return True
+        if symbolic_equal(pred, ref) or symbolic_equal(f"-({pred})", ref):
+            return True
     elif (
         prediction.count("=") == 1
         and len(prediction.split("=")[0].strip()) <= 2
@@ -853,15 +836,10 @@ def math_equal(
             return True
 
     # symbolic equal with sympy
-    if timeout:
-        if call_with_timeout(symbolic_equal_process, prediction, reference):
-            return True
-    else:
-        if symbolic_equal(prediction, reference):
-            return True
+    if symbolic_equal(prediction, reference):
+        return True
 
     return False
-
 
 def numeric_equal(prediction: float, reference: float):
     # Note that relative tolerance has significant impact
@@ -872,7 +850,7 @@ def numeric_equal(prediction: float, reference: float):
     # prediction = round(prediction, len(str(reference).split(".")[-1]))
     return isclose(reference, prediction, rel_tol=1e-4)
 
-
+@timeout_limit(seconds=5.0)
 def symbolic_equal(a, b):
     def _parse(s):
         for f in [parse_latex, parse_expr, latex2sympy]:
@@ -927,23 +905,3 @@ def symbolic_equal(a, b):
         pass
 
     return False
-
-
-def symbolic_equal_process(a, b, output_queue):
-    result = symbolic_equal(a, b)
-    output_queue.put(result)
-
-
-def call_with_timeout(func, *args, timeout=3, **kwargs):
-    output_queue = multiprocessing.Queue()
-    process_args = args + (output_queue,)
-    process = multiprocessing.Process(target=func, args=process_args, kwargs=kwargs)
-    process.start()
-    process.join(timeout)
-
-    if process.is_alive():
-        process.terminate()
-        process.join()
-        return False
-
-    return output_queue.get()

@@ -14,7 +14,7 @@ model=$1
 timestamp=$(date +"%Y%m%d_%H%M%S")
 
 project_name=AgenticLearning
-exp_name=Science-${project_name}-${model#*/}-${timestamp}
+exp_name=${project_name}-NativeScience-${model#*/}-${timestamp}
 
 # grpo related
 adv_estimator=grpo
@@ -34,7 +34,7 @@ nnodes=$2
 n_gpus_per_node=$3
 
 use_dynamic_bsz=True
-actor_ppo_max_token_len=$((max_prompt_length + max_response_length))
+actor_ppo_max_token_len=$((2 * max_prompt_length + 2 * max_response_length))
 ref_ppo_max_token_len=$((2 * max_prompt_length + 2 * max_response_length))
 
 offload=False
@@ -50,7 +50,7 @@ then
 ray start --head --port=8266 &
 sleep 10
 
-python3 -m agentic_learning.scripts.science.train_science \
+python3 -m agentic_learning.scripts.science.train \
     data.train_batch_size=${train_batch_size} \
     data.val_batch_size=256 \
     data.max_prompt_length=${max_prompt_length} \
@@ -58,7 +58,6 @@ python3 -m agentic_learning.scripts.science.train_science \
     actor_rollout_ref.model.path=${model} \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \
     actor_rollout_ref.model.use_remove_padding=True \
-    actor_rollout_ref.actor.checkpoint.contents=[] \
     actor_rollout_ref.actor.strategy=fsdp \
     actor_rollout_ref.hybrid_engine=True \
     actor_rollout_ref.actor.ppo_mini_batch_size=${train_batch_size} \
@@ -120,9 +119,9 @@ python3 -m agentic_learning.scripts.science.train_science \
     agent.overlong_filter=True \
     +agent.max_turns=5 \
     +agent.mask_result=False \
-    +agent.enable_interaction=True \
+    +agent.enable_interaction=False \
     +env.model_name="Qwen/Qwen3-30B-A3B-Instruct-2507" \
-    +env.base_url=["https://sd2b27ra80c6ft26ua11g.apigateway-cn-beijing.volceapi.com/v1"] \
+    +env.base_url=["https://sd2egkbccck1fc4k45t20.apigateway-cn-beijing.volceapi.com/v1"] \
 
 else
 # init worker
