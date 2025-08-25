@@ -2,13 +2,11 @@ import logging
 import os
 from typing import Union
 
-import psutil
 from omegaconf import open_dict
 from torch.distributed.device_mesh import init_device_mesh
 
 from verl import DataProto
 from verl.single_controller.base.decorator import Dispatch, register
-from verl.utils.checkpoint.fsdp_checkpoint_manager import FSDPCheckpointManager
 from verl.utils.debug import log_gpu_memory_usage
 from verl.utils.flops_counter import FlopsCounter
 from verl.utils.fs import copy_to_local
@@ -21,6 +19,8 @@ from verl.utils.import_utils import import_external_libs
 from verl.utils.device import get_device_name
 
 from verl.workers.fsdp_workers import ActorRolloutRefWorker as ActorRolloutRefWorker_
+
+from agentic_learning.verl.fsdp_checkpoint_manager import FSDPCheckpointManager
 
 
 logger = logging.getLogger(__file__)
