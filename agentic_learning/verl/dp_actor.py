@@ -89,21 +89,25 @@ def compute_policy_loss(
         cliprange_high = cliprange
     
     pg_losses1 = -advantages * ratio
-    pg_losses2 = -advantages * torch.clamp(ratio, 1 - cliprange_low,
-                                           1 + cliprange_high)  # - clip(ratio, 1-cliprange, 1+cliprange) * A
+    pg_losses2 = -advantages * torch.clamp(
+        ratio, 
+        (1 - cliprange_low) * ratio / (ratio.detach() + 1e-6),
+        (1 + cliprange_high) * ratio / (ratio.detach() + 1e-6))  # - clip(ratio, 1-cliprange, 1+cliprange) * A
     pg_losses3 = -advantages * clip_ratio_c
+    pg_losses4 = -advantages * torch.clamp_min(ratio, 0.1 * ratio / (ratio.detach() + 1e-6))
     
     
     clip_pg_losses1 = torch.maximum(pg_losses1, pg_losses2)
     # Dual-clip PPO
     clip_pg_losses2 = torch.min(pg_losses3, clip_pg_losses1)
+    clip_pg_losses3 = torch.maximum(pg_losses1, pg_losses4)
 
     # Remove the dual-clip PPO for now... (there's no evidence it improves performance)
     # torch.where(advantages < 0, clip_pg_losses2, clip_pg_losses1)
     pg_losses = torch.where(
         result_mask.bool(),
         clip_pg_losses1,
-        pg_losses1
+        clip_pg_losses3
     )
 
     # Statistics tracked for PPO.
@@ -411,7 +415,7 @@ class DataParallelPPOActor(DataParallelPPOActor_):
                             advantages=advantages,
                             result_mask=result_mask,
                             loss_mask=(
-                                ~(response_mask ^ result_mask)
+                                response_mask ^ result_mask
                                 if input_data.meta_info.get("mask_result", False) 
                                 else response_mask
                             ),

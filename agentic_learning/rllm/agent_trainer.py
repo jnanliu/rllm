@@ -1,12 +1,44 @@
 from typing import Any
+import multiprocessing
+from functools import partial
 
 import ray
 from datasets import Dataset
 
 from rllm.trainer.env_agent_mappings import AGENT_CLASS_MAPPING, ENV_CLASS_MAPPING
-from verl.trainer.ppo.reward import load_reward_manager
+from verl.trainer.ppo.reward import get_custom_reward_fn, default_compute_score
 
 from agentic_learning.verl.ppo_trainer import AgenticLearningPPOTrainer
+from agentic_learning.verl.reward_manager import NaiveRewardManager
+
+
+def load_reward_manager(config, tokenizer, num_examine, **reward_kwargs):
+    compute_score = get_custom_reward_fn(config)
+    final_compute_score = compute_score
+
+    if compute_score is None:
+        sandbox_config = config.reward_model.get("sandbox_fusion")
+        sandbox_url = sandbox_config.get("url") if sandbox_config else None
+        if sandbox_url:
+            sandbox_manager = multiprocessing.Manager()
+            _concurrent_semaphore = sandbox_manager.Semaphore(
+                sandbox_config.get("max_concurrent", 64)
+            )
+            final_compute_score = partial(
+                default_compute_score, 
+                sandbox_fusion_url=sandbox_url, 
+                concurrent_semaphore=_concurrent_semaphore
+            )
+        else:
+            final_compute_score = default_compute_score
+
+    return NaiveRewardManager(
+        tokenizer=tokenizer,
+        num_examine=num_examine,
+        compute_score=final_compute_score,
+        reward_fn_key=config.data.reward_fn_key,
+        **reward_kwargs,
+    )
 
 
 @ray.remote(num_cpus=1)  # please make sure main_task is not scheduled on head

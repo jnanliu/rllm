@@ -1,23 +1,38 @@
 {
   "dapo_math": {
-    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/dapo_math/train.parquet"
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/dapo_math/train.parquet"
   },
   "aime2024": {
-    "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/aime2024/test.parquet"
+    "test": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/aime2024/test.parquet"
   },
   "deepmath_lv7-9": {
-    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/deepmath_lv7-9/train.parquet"
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/deepmath_lv7-9/train.parquet"
   },
-  "opensicence2-20k": {
-    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/opensicence2-20k/train.parquet"
+  "openscience2-20k": {
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/openscience2-20k/train.parquet"
   },
   "gpqa-diamond": {
-    "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/gpqa-diamond/test.parquet"
+    "test": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/gpqa-diamond/test.parquet"
   },
   "reasoning-gym-27k": {
-    "train": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/reasoning-gym-27k/train.parquet"
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/reasoning-gym-27k/train.parquet"
   },
   "reasoning-gym-2_7k": {
-    "test": "/fs-computility/llmeval/liujunnan/project/agentic_learning/rllm/data/datasets/reasoning-gym-2_7k/test.parquet"
+    "test": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/reasoning-gym-2_7k/test.parquet"
+  },
+  "agentic-8k": {
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/agentic-8k/train.parquet"
+  },
+  "agentic-test": {
+    "test": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/agentic-test/test.parquet"
+  },
+  "deepscale-r-preview": {
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/deepscale-r-preview/train.parquet"
+  },
+  "agentic-learning-6k": {
+    "train": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/agentic-learning-6k/train.parquet"
+  },
+  "agentic-learning-test": {
+    "test": "/mnt/shared-storage-user/liujunnan/project/AgenticLearning/rllm/data/datasets/agentic-learning-test/test.parquet"
   }
 }

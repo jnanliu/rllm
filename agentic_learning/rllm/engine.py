@@ -2,13 +2,17 @@ import asyncio
 import time
 import logging
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import torch
 import openai
 from openai.types import Completion
 from transformers import PreTrainedTokenizerBase
+from tqdm import tqdm
+import uuid
 
+from rllm.environments import BaseEnv
 from rllm.agents.agent import Action, Trajectory
 from rllm.engine.agent_execution_engine import AgentExecutionEngine
 from rllm.agents.utils import get_recent_assistant_user_messages
@@ -474,17 +478,17 @@ class AgenticLearningAgentExecutionEngine(AgentExecutionEngine):
     
         # Closing environment using the executor.
         await loop.run_in_executor(self.executor, env.close)
-        if termination_reason:
-            if reward > 0:
-                color = "green"
-            else:
-                color = "yellow"
-            colorful_print(
-                f"Trajectory {idx} completed due to: {termination_reason}. Reward is {reward}. \n",
-                color,
-            )
-            if masked_out:
-                colorful_print(f"Trajectory {idx} is masked out due to overlong filter.", "red")
+        # if termination_reason:
+        #     if reward > 0:
+        #         color = "green"
+        #     else:
+        #         color = "yellow"
+        #     colorful_print(
+        #         f"Trajectory {idx} completed due to: {termination_reason}. Reward is {reward}. \n",
+        #         color,
+        #     )
+        #     if masked_out:
+        #         colorful_print(f"Trajectory {idx} is masked out due to overlong filter.", "red")
 
         trajectory: Trajectory = agent.trajectory
         # Aggregate final trajectory statistics
@@ -508,6 +512,7 @@ class AgenticLearningAgentExecutionEngine(AgentExecutionEngine):
                 "knowledge_messages": agent.knowledge_messages,
                 "trajectory_reward": trajectory.reward,
                 "idx": env.idx,
+                "termination_reason": termination_reason,
                 "chat_completions": agent.chat_completions,
                 "metrics": {
                     # Total number of steps taken in the trajectory
@@ -534,3 +539,59 @@ class AgenticLearningAgentExecutionEngine(AgentExecutionEngine):
                 "mc_returns": [step.mc_return for step in trajectory.steps][: len(episode_steps)],
             }
             return steps_result
+
+    async def trajectory_generator(self, reset_seed=0, timing_raw=None, mode="Text", **kwargs):
+        if timing_raw is None:
+            timing_raw = {}
+        assert all(env is not None and isinstance(env, BaseEnv) for env in self.envs), "All environments must be inheriting from BaseEnv"
+        assert all(env.is_multithread_safe() for env in self.envs), "All environments must be multithread safe for async engine"  # type: ignore
+        max_concurrency = self.n_parallel_agents
+        self.executor = ThreadPoolExecutor(max_workers=max_concurrency)
+
+        if self.engine_name == "verl":
+            self.rollout_engine.wake_up()
+
+        async def launch_one_trajectory_task(env_idx: int):
+            try:
+                application_id = str(uuid.uuid4())
+                result = await self.run_agent_trajectory_with_retry(
+                    idx=env_idx,
+                    application_id=application_id,
+                    seed=reset_seed,
+                    mode=mode,
+                    **kwargs,
+                )
+            except Exception as e:
+                import traceback
+
+                traceback.print_exc()
+                raise e
+            return result
+
+        # Create all N conceptual tasks. Their execution will be throttled by the semaphore
+        # and the availability of agent/env indices.
+        tasks_to_run = [launch_one_trajectory_task(i) for i in range(len(self.envs))]
+
+        tasks_completed = 0
+        progress_bar = tqdm(total=len(tasks_to_run), desc="Rollout Progress") 
+        for coro in asyncio.as_completed(tasks_to_run):
+            try:
+                result = await coro
+                tasks_completed += 1
+                if "termination_reason" in result:
+                    termination_reason = result.pop("termination_reason")
+                    progress_bar.set_postfix_str(f'Trajectory {result["idx"]} completed due to: {termination_reason}')
+                elif "idx" in result:
+                    progress_bar.set_postfix_str(f'Trajectory {result["idx"]} completed')
+                progress_bar.update(1)
+                # colorful_print(f"Number of Trajectories {tasks_completed}/{len(self.envs)} completed", "cyan")
+                yield result
+            except Exception as e:
+                raise e
+        
+        progress_bar.close()
+
+        if self.engine_name == "verl":
+            self.rollout_engine.sleep()
+
+        self.executor.shutdown(wait=False, cancel_futures=True)
