@@ -11,6 +11,7 @@ import numpy as np
 from omegaconf import OmegaConf
 from pprint import pprint
 from tqdm import tqdm
+from tqdm import tqdm
 
 from verl import DataProto
 from verl.protocol import pad_dataproto_to_divisor
@@ -92,6 +93,8 @@ class AgenticLearningPPOTrainer(AgentPPOTrainer):
         print(f"Time taken to validate agent: {time.time() - start_time}")
         # we start from step 1
         self.global_steps += 1
+
+        progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
 
         progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
 
@@ -450,7 +453,7 @@ class AgenticLearningPPOTrainer(AgentPPOTrainer):
             progress_bar.close()
         # save last checkpoints
         with _timer("save_checkpoint", timing_raw):
-                self._save_checkpoint()
+            self._save_checkpoint()
 
     def _validate_agent(self):
         rewards_lst = []

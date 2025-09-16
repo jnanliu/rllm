@@ -2,6 +2,7 @@ import re
 from typing import Any
 
 from agentic_learning.verl.utils.math_eval import math_scorer
+from agentic_learning.verl.utils.math_eval import math_scorer
 
 
 def last_boxed_only_string(string: str) -> str:
@@ -101,6 +102,7 @@ def compute_score(
         prediction = last_boxed_only_string(solution_str)
         score = science_scorer(prediction, ground_truth)
     elif data_source == "puzzle":
+        prediction = last_boxed_only_string(solution_str)
         prediction = last_boxed_only_string(solution_str)
         score = reasongym_scorer(prediction, ground_truth)
     else:
